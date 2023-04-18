@@ -11,9 +11,19 @@ cnx = pymysql.connect(host='localhost', port=3306, user='root', password='123456
 
 # 创建游标
 cursor = cnx.cursor()
-# 清空数据表
-truncate_table = "TRUNCATE TABLE hot_search"
-cursor.execute(truncate_table)
+# 创建一个名为hot_search的表
+create_table_sql = '''
+    CREATE TABLE hot_search (
+    date DATE NOT NULL,
+    time TIME NOT NULL,
+    hot_index INT NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    raw_hot INT NOT NULL,
+    label_name VARCHAR(255) NOT NULL,
+    url VARCHAR(255) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+'''
+cursor.execute(create_table_sql)
 # UA池
 ua_all = [
     "Mozilla/5.0 (Windows NT 6.1) AppleWebKit/531.2 (KHTML, like Gecko) Chrome/41.0.872.0 Safari/531.2",

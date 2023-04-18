@@ -6,42 +6,8 @@
 ## 1.1 数据库建表
 
 ```mysql
-## 建库、建表语句
 # 新建数据库
 CREATE DATABASE weibo CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
-# 选择数据库
-USE weibo;
-
-# 新建热搜表
-CREATE TABLE hot_search (
-    date DATE NOT NULL,
-    time TIME NOT NULL,
-    hot_index INT NOT NULL,
-    name VARCHAR(255) NOT NULL,
-    raw_hot INT NOT NULL,
-    label_name VARCHAR(255) NOT NULL,
-    url VARCHAR(255) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-# 新建评论表
-CREATE TABLE comment (
-    new_id VARCHAR(20) NOT NULL,
-    author_name VARCHAR(50) NOT NULL,
-    fans VARCHAR(20) NOT NULL,
-    comment_id VARCHAR(20) NOT NULL,
-    comment_text TEXT NOT NULL,
-    comment_date DATE NOT NULL,
-    comment_time TIME NOT NULL,
-    floor_number INT NOT NULL,
-    source VARCHAR(20) NOT NULL,
-    user_name VARCHAR(50) NOT NULL,
-    user_id VARCHAR(20) NOT NULL,
-    user_follow_count VARCHAR(20) NOT NULL,
-    user_followers_count VARCHAR(20) NOT NULL,
-    user_gender VARCHAR(5) NOT NULL,
-    PRIMARY KEY (comment_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ```
 
 ## 1.2 更改数据库配置

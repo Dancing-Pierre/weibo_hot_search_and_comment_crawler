@@ -38,9 +38,30 @@ cnx = pymysql.connect(host='localhost', port=3306, user='root', password='123456
                       db='weibo', charset='utf8mb4')
 # 创建游标
 cursor = cnx.cursor()
-# 清空数据表
-truncate_table = "TRUNCATE TABLE comment"
-cursor.execute(truncate_table)
+
+# 创建一个名为comment的表
+create_table_sql = '''
+    CREATE TABLE comment (
+    new_id VARCHAR(20) NOT NULL,
+    author_name VARCHAR(50) NOT NULL,
+    fans VARCHAR(20) NOT NULL,
+    forward VARCHAR(20) NOT NULL,
+    news_follow VARCHAR(20) NOT NULL,
+    comment_id VARCHAR(20) NOT NULL,
+    comment_text TEXT NOT NULL,
+    comment_date DATE NOT NULL,
+    comment_time TIME NOT NULL,
+    floor_number INT NOT NULL,
+    source VARCHAR(20) NOT NULL,
+    user_name VARCHAR(50) NOT NULL,
+    user_id VARCHAR(20) NOT NULL,
+    user_follow_count VARCHAR(20) NOT NULL,
+    user_followers_count VARCHAR(20) NOT NULL,
+    user_gender VARCHAR(5) NOT NULL,
+    PRIMARY KEY (comment_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+'''
+cursor.execute(create_table_sql)
 
 
 # 创建“开始爬取”按钮的回调函数
@@ -71,60 +92,85 @@ def run_spider(url):
     for i in data:
         data_dict = {}
         sum = sum + 1
+        # 新闻id
         news_id = ''.join(i.xpath('./@mid'))
         data_dict['news_id'] = news_id
+        # 发布新闻的作者名字
         author_name = ''.join(i.xpath('.//div[@class="info"]/div[2]//text()')).replace('\n', '').replace('\r',
                                                                                                          '').replace(
             ' ', '')
         data_dict['author_name'] = author_name
+        # 转发
+        forward = ''.join(i.xpath('.//div[@class="card-act"]//li[2]//text()')).replace('转发', '').replace(' ', '')
+        data_dict['forward'] = forward
+        # 新闻点赞数
+        news_follow = ''.join(i.xpath('.//div[@class="card-act"]//li[4]//text()'))
+        data_dict['news_follow'] = news_follow
+        # 带有作者id的链接
         author_url = ''.join(i.xpath('.//div[@class="info"]/div[2]/a[1]/@href'))
+        # 正则取出作者id
         author_id = re.search(r'\/(\d+)\?', author_url)
         author_id = author_id.group()[1:-1]
+        # 拼接作者详情页链接
         author_detail_url = f'https://weibo.com/ajax/profile/info?custom={author_id}'
+        # 请求作者详情页拿粉丝之类的数据
         b = requests.get(url=author_detail_url, headers=header)
         response = json.loads(b.text)
-        fans = response['data']['user']['followers_count_str']
+        # 作者粉丝
+        fans = response['data']['user']['followers_count']
+        fans = f'{int(fans) / 10000}万'
         data_dict['fans'] = fans
-        print(data_dict)
         # 采集评论
         url = 'https://m.weibo.cn/comments/hotflow?id={}&mid={}&max_id_type=0&sudaref=weibo.com&display=0&retcode=6102'.format(
             news_id, news_id)
         c = requests.get(url=url, headers=header)
         print(c.text)
-        data = json.loads(c.text)['data']['data']
-        for i in data:
-            comment_id = i['id']
-            comment_text = i['text']
-            input_string = i['created_at']
-            # 定义输入字符串和格式
-            input_format = '%a %b %d %H:%M:%S %z %Y'
-            # 将字符串转换为日期时间对象
-            dt = datetime.datetime.strptime(input_string, input_format)
-            # 将日期时间对象格式化为指定格式的字符串
-            output_format_1 = '%Y-%m-%d'
-            comment_date = dt.strftime(output_format_1)
-            output_format_2 = '%H:%M:%S'
-            comment_time = dt.strftime(output_format_2)
-            floor_number = i['floor_number']
-            source = i['source'][2:]
-            user_name = i['user']['screen_name']
-            user_id = i['user']['id']
-            # 关注
-            user_follow_count = i['user']['follow_count']
-            # 粉丝
-            user_followers_count = i['user']['followers_count']
-            # 性别
-            user_gender = tran_gender(i['user']['gender'])
-            data = {'news_id': news_id, 'author_name': author_name, 'fans': fans, 'comment_id': comment_id,
-                    'comment_text': comment_text, 'comment_date': comment_date, 'comment_time': comment_time,
-                    'floor_number': floor_number, 'source': source, 'user_name': user_name, 'user_id': user_id,
-                    'user_follow_count': user_follow_count, 'user_followers_count': user_followers_count,
-                    'user_gender': user_gender}
-            print(data)
-            data_tuple = tuple(data.values())
-            add_data = "INSERT INTO comment (new_id,author_name,fans,comment_id,comment_text,comment_date,comment_time,floor_number,source,user_name,user_id,user_follow_count,user_followers_count,user_gender) VALUES (%s, %s,%s, %s, %s,%s, %s,%s, %s,%s, %s, %s,%s, %s)"
-            cursor.execute(add_data, data_tuple)
-            cnx.commit()
+        try:
+            data = json.loads(c.text)['data']['data']
+            for i in data:
+                # 评论id
+                comment_id = i['id']
+                # 评论详情
+                comment_text = i['text']
+                # 评论时间
+                input_string = i['created_at']
+                # 定义输入字符串和格式
+                input_format = '%a %b %d %H:%M:%S %z %Y'
+                # 将字符串转换为日期时间对象
+                dt = datetime.datetime.strptime(input_string, input_format)
+                # 将日期时间对象格式化为指定格式的字符串
+                # 年月日
+                output_format_1 = '%Y-%m-%d'
+                comment_date = dt.strftime(output_format_1)
+                # 时分秒
+                output_format_2 = '%H:%M:%S'
+                comment_time = dt.strftime(output_format_2)
+                # 评论点赞数
+                floor_number = i['floor_number']
+                source = i['source'][2:]
+                # 评论用户名称
+                user_name = i['user']['screen_name']
+                # 评论用户id
+                user_id = i['user']['id']
+                # 关注
+                user_follow_count = i['user']['follow_count']
+                # 粉丝
+                user_followers_count = i['user']['followers_count']
+                # 性别
+                user_gender = tran_gender(i['user']['gender'])
+                data = {'news_id': news_id, 'author_name': author_name, 'fans': fans, 'forward': forward,
+                        'news_follow': news_follow, 'comment_id': comment_id,
+                        'comment_text': comment_text, 'comment_date': comment_date, 'comment_time': comment_time,
+                        'floor_number': floor_number, 'source': source, 'user_name': user_name, 'user_id': user_id,
+                        'user_follow_count': user_follow_count, 'user_followers_count': user_followers_count,
+                        'user_gender': user_gender}
+                print(data)
+                data_tuple = tuple(data.values())
+                add_data = "INSERT INTO comment (new_id,author_name,fans,forward,news_follow,comment_id,comment_text,comment_date,comment_time,floor_number,source,user_name,user_id,user_follow_count,user_followers_count,user_gender) VALUES (%s, %s,%s,%s,%s, %s, %s,%s, %s,%s, %s,%s, %s, %s,%s, %s)"
+                cursor.execute(add_data, data_tuple)
+                cnx.commit()
+        except:
+            pass
         # 想爬几条新闻，限制两条
         if sum == 10:
             break
