@@ -11,6 +11,13 @@ cnx = pymysql.connect(host='localhost', port=3306, user='root', password='123456
 
 # 创建游标
 cursor = cnx.cursor()
+
+# 删除表
+drop_table_sql = '''
+    drop table if exists hot_search;
+'''
+cursor.execute(drop_table_sql)
+
 # 创建一个名为hot_search的表
 create_table_sql = '''
     CREATE TABLE hot_search (

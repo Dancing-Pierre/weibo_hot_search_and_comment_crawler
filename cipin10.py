@@ -9,9 +9,15 @@ import matplotlib.pyplot as plt
 conn = pymysql.connect(host='localhost', user='root', password='123456', database='weibo')
 cursor = conn.cursor()
 
+# 删除表
+drop_table_sql = '''
+    drop table if exists top_words;
+'''
+cursor.execute(drop_table_sql)
+
 # 创建一个名为top_words的表
 create_table_sql = '''
-    CREATE TABLE IF NOT EXISTS top_words (
+    CREATE TABLE top_words (
         id INT(11) NOT NULL AUTO_INCREMENT,
         word VARCHAR(255) NOT NULL,
         count INT(11) NOT NULL,
